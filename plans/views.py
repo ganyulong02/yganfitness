@@ -4,26 +4,37 @@ from django.urls import reverse_lazy
 from django.views import generic
 from .models import FitnessPlan
 from django.contrib.auth import authenticate, login
+from django.contrib.auth.decorators import login_required
+
 
 def home(request):
     plans = FitnessPlan.objects
-    return render(request, 'plans/home.html', {'plans':plans})
+    return render(request, 'plans/home.html', {'plans': plans})
 
-def plan(request,pk):
+
+def plan(request, pk):
     plan = get_object_or_404(FitnessPlan, pk=pk)
-    if plan.premium :
+    if plan.premium:
         return redirect('join')
     else:
-        return render(request, 'plans/plan.html', {'plan':plan})
+        return render(request, 'plans/plan.html', {'plan': plan})
+
 
 def join(request):
     return render(request, 'plans/join.html')
 
+
+@login_required
 def checkout(request):
-    return render(request, 'plans/checkout.html')
+    if request.method == 'POST':
+        return redirect('home')
+    else:
+        return render(request, 'plans/checkout.html')
+
 
 def settings(request):
     return render(request, 'registration/settings.html')
+
 
 class SignUp(generic.CreateView):
     form_class = CustomSignupForm
