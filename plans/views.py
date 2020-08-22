@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from .forms import CustomSignupForm
 from django.urls import reverse_lazy
 from django.views import generic
-from .models import FitnessPlan
+from .models import FitnessPlan, Customer
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 import stripe
@@ -18,6 +18,12 @@ def home(request):
 def plan(request, pk):
     plan = get_object_or_404(FitnessPlan, pk=pk)
     if plan.premium:
+        if request.user.is_authenticated:
+            try:
+                if request.user.customer.membership:
+                    return render(request, 'plans/plan.html', {'plan': plan})
+            except Customer.DoesNotExist:
+                return redirect('join')
         return redirect('join')
     else:
         return render(request, 'plans/plan.html', {'plan': plan})
@@ -29,6 +35,11 @@ def join(request):
 
 @login_required
 def checkout(request):
+    try:
+        if request.user.customer.membership:
+            return redirect('settings')
+    except Customer.DoesNotExist:
+        pass
 
     coupons = {
         'halloween': 31,
@@ -50,6 +61,16 @@ def checkout(request):
                                                       coupon=request.POST['coupon'].lower())
         else:
             subscription = stripe.Subscription.create(customer=stripe_customer.id, items=[{'plan': plan}])
+
+        # create a customer
+        customer = Customer()
+        customer.user = request.user
+        customer.stripeid = stripe_customer.id
+        customer.membership = True
+        customer.cancel_at_period_end = False
+        customer.stripe_subscription_id = subscription.id
+        customer.save()
+
         return redirect('home')
     else:
         # request.method == 'GET'
