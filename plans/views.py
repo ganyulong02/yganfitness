@@ -10,6 +10,7 @@ from django.http import HttpResponse
 
 stripe.api_key = 'sk_test_51HHjtKJSwY2ShoTT2pNbqvdXwXjeXU7My9gauhKDxSB7zFLMxFc9oAjyxXMKtLvcCKzCEOkNtC68F3apBKfmTPYU005xszO2En'
 
+
 @user_passes_test(lambda u: u.is_superuser)
 def updateaccounts(request):
     customers = Customer.objects.all()
@@ -22,6 +23,7 @@ def updateaccounts(request):
         customer.cancel_at_period_end = subscription.cancel_at_period_end
         customer.save()
         return HttpResponse('Completed!')
+
 
 def home(request):
     plans = FitnessPlan.objects
@@ -57,17 +59,18 @@ def checkout(request):
     coupons = {
         'halloween': 31,
         'welcome': 10,
-   }
+    }
 
     if request.method == 'POST':
         stripe_customer = stripe.Customer.create(email=request.user.email, source=request.POST['stripeToken'])
-        plan = 'price_1HHk9WJSwY2ShoTTkf7Vxy8O' # monthly
+        plan = 'price_1HHk9WJSwY2ShoTTkf7Vxy8O'  # monthly
         if request.POST['plan'] == 'yearly':
             plan = 'price_1HHkALJSwY2ShoTT1lvBuXvX'  # yearly
         if request.POST['coupon'] in coupons:
             percentage = coupons[request.POST['coupon'].lower()]
             try:
-                coupon = stripe.Coupon.create(duration='once', id=request.POST['coupon'].lower(), percent_off=percentage)
+                coupon = stripe.Coupon.create(duration='once', id=request.POST['coupon'].lower(),
+                                              percent_off=percentage)
             except:
                 pass
             subscription = stripe.Subscription.create(customer=stripe_customer.id, items=[{'plan': plan}],
